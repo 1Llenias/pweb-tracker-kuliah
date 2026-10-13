@@ -41,6 +41,7 @@ h1 { margin: 8px 0; font-size: clamp(26px, 5vw, 36px); }
 .load-status { margin: 12px 0; color: #5d7283; font-size: 14px; }
 .load-status.is-loading { color: #526f83; }
 .load-status.is-error { color: #b64031; }
+.action-message { margin: 12px 0; color: #b64031; font-size: 13px; }
 .retry-button { margin: 0 0 12px; padding: 7px 12px; border: 1px solid #b64031; border-radius: 6px; background: #fff; color: #b64031; font: inherit; cursor: pointer; }
 .retry-button:disabled { opacity: .6; cursor: wait; }
 .task-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }

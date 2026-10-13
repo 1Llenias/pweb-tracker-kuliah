@@ -9,6 +9,7 @@ const formMessage = document.querySelector("#form-message");
 const filterButtons = document.querySelector(".filters");
 const loadStatus = document.querySelector("#load-status");
 const retryButton = document.querySelector("#retry-button");
+const actionMessage = document.querySelector("#action-message");
 const submitButton = taskForm.querySelector('button[type="submit"]');
 let currentFilter = "semua";
 let loadState = "loading";
@@ -17,6 +18,7 @@ let loadError = "";
 async function api(path, options = {}) {
   const response = await fetch(path, options);
   const responseText = await response.text();
+  const contentType = response.headers.get("content-type") || "";
   let payload = null;
 
   if (responseText) {
@@ -29,8 +31,12 @@ async function api(path, options = {}) {
 
   if (!response.ok) {
     const serverMessage = payload?.message || payload?.error ||
-      (typeof payload === "string" ? payload : "");
-    throw new Error(serverMessage || `Request gagal (${response.status}).`);
+      (typeof payload === "string" && !contentType.includes("text/html") ? payload : "");
+    const method = (options.method || "GET").toUpperCase();
+    const detail = serverMessage || (contentType.includes("text/html")
+      ? "Server mengembalikan halaman HTML, bukan respons API JSON."
+      : "Tidak ada pesan dari server.");
+    throw new Error(`${method} ${path} gagal (${response.status}): ${detail}`);
   }
 
   return payload;
@@ -65,6 +71,7 @@ async function fetchTasks() {
 
 function render() {
   taskList.replaceChildren();
+  actionMessage.hidden = true;
   taskList.setAttribute("aria-busy", String(loadState === "loading"));
 
   filterButtons.querySelectorAll(".filter-button").forEach((button) => {
@@ -170,29 +177,60 @@ filterButtons.addEventListener("click", (event) => {
 });
 
 // Satu listener di parent menangani kontrol pada semua item tugas.
-taskList.addEventListener("change", (event) => {
+taskList.addEventListener("change", async (event) => {
   if (!event.target.matches('input[type="checkbox"]')) return;
 
+  const checkbox = event.target;
   const item = event.target.closest(".task-item");
-  const taskId = Number(item.dataset.taskId);
-  const task = tasks.find((currentTask) => currentTask.id === taskId);
+  const taskId = item.dataset.taskId;
+  const task = tasks.find((currentTask) => String(currentTask.id) === taskId);
 
   if (!task) return;
-  task.selesai = event.target.checked;
-  render();
+  checkbox.disabled = true;
+  actionMessage.hidden = true;
+
+  try {
+    const payload = await api(`/api/tugas/${encodeURIComponent(taskId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ selesai: checkbox.checked }),
+    });
+
+    const responseTask = payload?.data ?? payload?.task ?? payload;
+    if (responseTask && typeof responseTask === "object" && !Array.isArray(responseTask)) {
+      Object.assign(task, responseTask);
+    }
+    if (typeof responseTask?.selesai !== "boolean") task.selesai = checkbox.checked;
+    render();
+  } catch (error) {
+    render();
+    actionMessage.textContent = `Gagal memperbarui tugas: ${error.message}`;
+    actionMessage.hidden = false;
+  }
 });
 
-taskList.addEventListener("click", (event) => {
+taskList.addEventListener("click", async (event) => {
   const deleteButton = event.target.closest(".delete-button");
   if (!deleteButton || !taskList.contains(deleteButton)) return;
 
   const item = deleteButton.closest(".task-item");
-  const taskId = Number(item.dataset.taskId);
-  const taskIndex = tasks.findIndex((task) => task.id === taskId);
+  const taskId = item.dataset.taskId;
+  const taskIndex = tasks.findIndex((task) => String(task.id) === taskId);
 
   if (taskIndex === -1) return;
-  tasks.splice(taskIndex, 1);
-  render();
+  deleteButton.disabled = true;
+  actionMessage.hidden = true;
+
+  try {
+    await api(`/api/tugas/${encodeURIComponent(taskId)}`, { method: "DELETE" });
+    const currentIndex = tasks.findIndex((task) => String(task.id) === taskId);
+    if (currentIndex !== -1) tasks.splice(currentIndex, 1);
+    render();
+  } catch (error) {
+    render();
+    actionMessage.textContent = `Gagal menghapus tugas: ${error.message}`;
+    actionMessage.hidden = false;
+  }
 });
 
 taskForm.addEventListener("submit", async (event) => {

@@ -13,7 +13,7 @@
       <header class="app-header">
         <p class="eyebrow">Task Tracker Kuliah v2</p>
         <h1>Terhubung ke REST API</h1>
-        <p class="intro">Tugas dimuat dari server dan tugas baru dikirim melalui REST API.</p>
+        <p class="intro">Tugas dimuat, ditambah, diperbarui, dan dihapus melalui REST API.</p>
       </header>
 
       <section class="tracker" aria-label="Task Tracker Kuliah">
@@ -47,6 +47,7 @@
 
         <p id="load-status" class="load-status" role="status" aria-live="polite" hidden></p>
         <button id="retry-button" class="retry-button" type="button" hidden>Coba lagi</button>
+        <p id="action-message" class="action-message" role="status" aria-live="polite" hidden></p>
         <ul id="task-list" class="task-list" aria-label="Daftar tugas"></ul>
         <p id="empty-state" class="empty-state">Belum ada tugas. Tambahkan tugas pertamamu.</p>
       </section>
