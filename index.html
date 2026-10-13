@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#10283b" />
+    <title>Task Tracker Kuliah</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="app">
+      <header class="app-header">
+        <p class="eyebrow">Task Tracker Kuliah</p>
+        <h1>Daftar tugas kuliah</h1>
+        <p class="intro">Catat tugas kuliah dan pantau deadline-mu.</p>
+      </header>
+
+      <section class="tracker" aria-label="Task Tracker Kuliah">
+        <form id="task-form" class="task-form">
+          <label for="task-title">Judul tugas</label>
+          <input id="task-title" name="judul" type="text" minlength="3" placeholder="Contoh: Lab 10 event delegation" required />
+
+          <label for="task-course">Mata kuliah</label>
+          <select id="task-course" name="matkul" required>
+            <option value="">Pilih mata kuliah</option>
+            <option value="Pemrograman Web">Pemrograman Web</option>
+            <option value="Basis Data">Basis Data</option>
+            <option value="Struktur Data">Struktur Data</option>
+          </select>
+
+          <label for="task-deadline">Deadline</label>
+          <input id="task-deadline" name="deadline" type="date" required />
+
+          <button type="submit">Tambah tugas</button>
+          <p id="form-message" class="form-message" aria-live="polite"></p>
+        </form>
+
+        <div class="task-toolbar">
+          <div class="filters" role="group" aria-label="Filter tugas">
+            <button class="filter-button is-active" type="button" data-filter="semua" aria-pressed="true">Semua</button>
+            <button class="filter-button" type="button" data-filter="aktif" aria-pressed="false">Aktif</button>
+            <button class="filter-button" type="button" data-filter="selesai" aria-pressed="false">Selesai</button>
+          </div>
+          <p id="task-counter" class="task-counter" aria-live="polite">0 tugas aktif</p>
+        </div>
+
+        <ul id="task-list" class="task-list" aria-label="Daftar tugas"></ul>
+        <p id="empty-state" class="empty-state">Belum ada tugas. Tambahkan tugas pertamamu.</p>
+      </section>
+    </main>
+  </body>
+</html>
