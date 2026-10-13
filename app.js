@@ -21,11 +21,19 @@ const taskCounter = document.querySelector("#task-counter");
 const emptyState = document.querySelector("#empty-state");
 const taskForm = document.querySelector("#task-form");
 const formMessage = document.querySelector("#form-message");
+const filterButtons = document.querySelector(".filters");
+let currentFilter = "semua";
 
 function render() {
   taskList.replaceChildren();
 
-  tasks.forEach((task) => {
+  const visibleTasks = tasks.filter((task) => {
+    if (currentFilter === "aktif") return !task.selesai;
+    if (currentFilter === "selesai") return task.selesai;
+    return true;
+  });
+
+  visibleTasks.forEach((task) => {
     const item = document.createElement("li");
     item.className = "task-item";
     item.dataset.taskId = task.id;
@@ -60,8 +68,25 @@ function render() {
 
   const activeCount = tasks.filter((task) => !task.selesai).length;
   taskCounter.textContent = `${activeCount} tugas aktif`;
-  emptyState.hidden = tasks.length > 0;
+  emptyState.textContent = tasks.length === 0
+    ? "Belum ada tugas. Tambahkan tugas pertamamu."
+    : "Tidak ada tugas untuk filter ini.";
+  emptyState.hidden = visibleTasks.length > 0;
+
+  filterButtons.querySelectorAll(".filter-button").forEach((button) => {
+    const isActive = button.dataset.filter === currentFilter;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
 }
+
+filterButtons.addEventListener("click", (event) => {
+  const button = event.target.closest(".filter-button");
+  if (!button || !filterButtons.contains(button)) return;
+
+  currentFilter = button.dataset.filter;
+  render();
+});
 
 // Satu listener di parent menangani kontrol pada semua item tugas.
 taskList.addEventListener("change", (event) => {
