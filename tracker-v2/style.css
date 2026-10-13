@@ -1,0 +1,67 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #172b3b;
+  background: #10283b;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  padding: 32px 20px;
+  background-color: #10283b;
+  background-image: linear-gradient(#ffffff0d 1px, transparent 1px), linear-gradient(90deg, #ffffff0d 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.app { width: min(100%, 680px); margin: 0 auto; }
+.app-header { margin-bottom: 24px; color: #e6f0f7; }
+.eyebrow { color: #f1a54b; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+h1 { margin: 8px 0; font-size: clamp(26px, 5vw, 36px); }
+.intro { margin: 0; color: #a8c2d3; line-height: 1.6; }
+
+.tracker { padding: 24px; border-radius: 12px; background: #fff; box-shadow: 0 12px 36px #06152155; }
+.task-form { display: grid; gap: 9px; }
+.task-form label { margin-top: 4px; color: #435668; font-size: 14px; font-weight: 600; }
+.task-form input, .task-form select { width: 100%; min-height: 42px; padding: 9px 12px; border: 1px solid #b7c8d6; border-radius: 6px; background: #fff; color: #172b3b; font: inherit; }
+.task-form button { min-height: 42px; padding: 9px 16px; border: 0; border-radius: 6px; background: #10283b; color: white; font: inherit; font-weight: 600; cursor: pointer; }
+.form-message { min-height: 18px; margin: 0; color: #b64031; font-size: 13px; }
+.task-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filter-button { padding: 7px 12px; border: 1px solid #b7c8d6; border-radius: 6px; background: white; color: #263d50; cursor: pointer; }
+.filter-button.is-active { border-color: #10283b; background: #10283b; color: white; }
+.task-counter { margin: 0; color: #5d7283; font-size: 14px; }
+.load-status { margin: 12px 0; color: #5d7283; font-size: 14px; }
+.load-status.is-loading { color: #526f83; }
+.load-status.is-error { color: #b64031; }
+.retry-button { margin: 0 0 12px; padding: 7px 12px; border: 1px solid #b64031; border-radius: 6px; background: #fff; color: #b64031; font: inherit; cursor: pointer; }
+.retry-button:disabled { opacity: .6; cursor: wait; }
+.task-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.task-skeleton { display: grid; grid-template-columns: 18px minmax(0, 1fr) 40px; align-items: center; gap: 12px; min-height: 54px; padding: 12px; border: 1px solid #d5e0e8; border-radius: 7px; }
+.task-skeleton > span { width: 16px; height: 16px; border-radius: 4px; }
+.task-skeleton > span:last-child { width: 38px; height: 24px; }
+.skeleton-text { display: grid; justify-items: start; gap: 7px; }
+.skeleton-text span { width: min(220px, 75%); height: 10px; border-radius: 5px; }
+.skeleton-text span:last-child { width: min(150px, 55%); height: 8px; }
+.task-skeleton > span, .skeleton-text span { background: linear-gradient(90deg, #edf1f4 25%, #f7f9fa 50%, #edf1f4 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.3s linear infinite; }
+@keyframes skeleton-shimmer { to { background-position: -200% 0; } }
+.task-item { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid #d5e0e8; border-radius: 7px; }
+.task-item input { width: 16px; height: 16px; margin: 0; }
+.task-details { min-width: 0; }
+.task-title, .task-metadata { margin: 0; }
+.task-title { color: #263d50; font-size: 14px; }
+.task-title.is-complete { color: #8293a0; text-decoration: line-through; }
+.task-metadata { margin-top: 4px; color: #637b8d; font-size: 12px; }
+.delete-button { padding: 6px 9px; border: 1px solid #e4a39a; border-radius: 6px; background: #fff; color: #b64031; cursor: pointer; }
+.empty-state { margin: 18px 0 4px; color: #718392; text-align: center; }
+
+@media (max-width: 480px) {
+  body { padding: 22px 14px; }
+  .tracker { padding: 18px; }
+  .task-toolbar { align-items: flex-start; flex-direction: column; }
+}

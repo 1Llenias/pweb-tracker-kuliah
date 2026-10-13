@@ -10,6 +10,8 @@ const filterButtons = document.querySelector(".filters");
 const loadStatus = document.querySelector("#load-status");
 const retryButton = document.querySelector("#retry-button");
 let currentFilter = "semua";
+let loadState = "loading";
+let loadError = "";
 
 async function api(path) {
   const response = await fetch(path);
@@ -23,13 +25,9 @@ async function api(path) {
 }
 
 async function fetchTasks() {
-  retryButton.hidden = true;
-  retryButton.disabled = true;
-  loadStatus.hidden = false;
-  loadStatus.className = "load-status is-loading";
-  loadStatus.textContent = "Memuat tugas dari server…";
-  emptyState.hidden = true;
-  taskCounter.textContent = "Memuat…";
+  loadState = "loading";
+  loadError = "";
+  render();
 
   try {
     const payload = await api("/api/tugas");
@@ -39,16 +37,13 @@ async function fetchTasks() {
     }
 
     tasks = serverTasks;
-    loadStatus.hidden = true;
+    loadState = "success";
     render();
   } catch (error) {
     tasks = [];
-    taskList.replaceChildren();
-    taskCounter.textContent = "Tugas belum termuat";
-    emptyState.hidden = true;
-    loadStatus.className = "load-status is-error";
-    loadStatus.textContent = `Gagal memuat tugas: ${error.message}`;
-    retryButton.hidden = false;
+    loadState = "error";
+    loadError = error.message;
+    render();
   } finally {
     retryButton.disabled = false;
   }
@@ -56,6 +51,51 @@ async function fetchTasks() {
 
 function render() {
   taskList.replaceChildren();
+  taskList.setAttribute("aria-busy", String(loadState === "loading"));
+
+  filterButtons.querySelectorAll(".filter-button").forEach((button) => {
+    const isActive = button.dataset.filter === currentFilter;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+
+  if (loadState === "loading") {
+    loadStatus.hidden = false;
+    loadStatus.className = "load-status is-loading";
+    loadStatus.textContent = "Memuat tugas dari server…";
+    taskCounter.textContent = "Tunggu sesaat...";
+    emptyState.hidden = true;
+    retryButton.hidden = true;
+
+    for (let index = 0; index < 3; index += 1) {
+      const skeleton = document.createElement("li");
+      skeleton.className = "task-skeleton";
+      skeleton.setAttribute("aria-hidden", "true");
+      const checkboxPlaceholder = document.createElement("span");
+      const textPlaceholders = document.createElement("div");
+      textPlaceholders.className = "skeleton-text";
+      const titlePlaceholder = document.createElement("span");
+      const metadataPlaceholder = document.createElement("span");
+      const buttonPlaceholder = document.createElement("span");
+      textPlaceholders.append(titlePlaceholder, metadataPlaceholder);
+      skeleton.append(checkboxPlaceholder, textPlaceholders, buttonPlaceholder);
+      taskList.append(skeleton);
+    }
+    return;
+  }
+
+  if (loadState === "error") {
+    loadStatus.hidden = false;
+    loadStatus.className = "load-status is-error";
+    loadStatus.textContent = `Gagal memuat tugas: ${loadError}`;
+    taskCounter.textContent = "Tugas belum termuat";
+    emptyState.hidden = true;
+    retryButton.hidden = false;
+    return;
+  }
+
+  loadStatus.hidden = true;
+  retryButton.hidden = true;
 
   const sortedTasks = [...tasks].sort((first, second) =>
     first.deadline.localeCompare(second.deadline)
@@ -105,12 +145,6 @@ function render() {
     ? "Belum ada tugas. Tambahkan tugas pertamamu."
     : "Tidak ada tugas untuk filter ini.";
   emptyState.hidden = visibleTasks.length > 0;
-
-  filterButtons.querySelectorAll(".filter-button").forEach((button) => {
-    const isActive = button.dataset.filter === currentFilter;
-    button.classList.toggle("is-active", isActive);
-    button.setAttribute("aria-pressed", String(isActive));
-  });
 }
 
 filterButtons.addEventListener("click", (event) => {
