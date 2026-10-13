@@ -1,52 +1,5 @@
-// Tahap 2: rendering daftar tugas dari state (array of objects).
-const initialTasks = [
-  {
-    id: 1,
-    judul: "Lab 10 event delegation",
-    matkul: "Pemrograman Web",
-    deadline: "2026-10-08",
-    selesai: false,
-  },
-  {
-    id: 2,
-    judul: "ERD sistem perpustakaan",
-    matkul: "Basis Data",
-    deadline: "2026-10-12",
-    selesai: true,
-  },
-];
-const storageKey = "task-tracker-kuliah-tasks";
-
-function loadTasks() {
-  try {
-    const savedTasks = localStorage.getItem(storageKey);
-    if (!savedTasks) return initialTasks;
-
-    const parsedTasks = JSON.parse(savedTasks);
-    if (!Array.isArray(parsedTasks)) return initialTasks;
-
-    return parsedTasks.filter((task) =>
-      task && Number.isFinite(Number(task.id)) &&
-      typeof task.judul === "string" &&
-      typeof task.matkul === "string" &&
-      typeof task.deadline === "string" &&
-      typeof task.selesai === "boolean"
-    );
-  } catch (error) {
-    console.warn("Data tugas dari localStorage tidak dapat dibaca.", error);
-    return initialTasks;
-  }
-}
-
-let tasks = loadTasks();
-
-function saveTasks() {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(tasks));
-  } catch (error) {
-    console.warn("Data tugas tidak dapat disimpan ke localStorage.", error);
-  }
-}
+// Tahap GET: server menjadi sumber data tugas.
+let tasks = [];
 
 const taskList = document.querySelector("#task-list");
 const taskCounter = document.querySelector("#task-counter");
@@ -54,7 +7,52 @@ const emptyState = document.querySelector("#empty-state");
 const taskForm = document.querySelector("#task-form");
 const formMessage = document.querySelector("#form-message");
 const filterButtons = document.querySelector(".filters");
+const loadStatus = document.querySelector("#load-status");
+const retryButton = document.querySelector("#retry-button");
 let currentFilter = "semua";
+
+async function api(path) {
+  const response = await fetch(path);
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(payload?.message || payload?.error || `Request gagal (${response.status}).`);
+  }
+
+  return payload;
+}
+
+async function fetchTasks() {
+  retryButton.hidden = true;
+  retryButton.disabled = true;
+  loadStatus.hidden = false;
+  loadStatus.className = "load-status is-loading";
+  loadStatus.textContent = "Memuat tugas dari server…";
+  emptyState.hidden = true;
+  taskCounter.textContent = "Memuat…";
+
+  try {
+    const payload = await api("/api/tugas");
+    const serverTasks = Array.isArray(payload) ? payload : payload?.data;
+    if (!Array.isArray(serverTasks)) {
+      throw new Error("Format data tugas dari server tidak sesuai.");
+    }
+
+    tasks = serverTasks;
+    loadStatus.hidden = true;
+    render();
+  } catch (error) {
+    tasks = [];
+    taskList.replaceChildren();
+    taskCounter.textContent = "Tugas belum termuat";
+    emptyState.hidden = true;
+    loadStatus.className = "load-status is-error";
+    loadStatus.textContent = `Gagal memuat tugas: ${error.message}`;
+    retryButton.hidden = false;
+  } finally {
+    retryButton.disabled = false;
+  }
+}
 
 function render() {
   taskList.replaceChildren();
@@ -133,7 +131,6 @@ taskList.addEventListener("change", (event) => {
 
   if (!task) return;
   task.selesai = event.target.checked;
-  saveTasks();
   render();
 });
 
@@ -147,7 +144,6 @@ taskList.addEventListener("click", (event) => {
 
   if (taskIndex === -1) return;
   tasks.splice(taskIndex, 1);
-  saveTasks();
   render();
 });
 
@@ -187,10 +183,10 @@ taskForm.addEventListener("submit", (event) => {
     selesai: false,
   });
 
-  saveTasks();
   taskForm.reset();
   formMessage.textContent = "";
   render();
 });
 
-render();
+retryButton.addEventListener("click", fetchTasks);
+fetchTasks();
