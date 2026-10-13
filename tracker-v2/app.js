@@ -9,16 +9,28 @@ const formMessage = document.querySelector("#form-message");
 const filterButtons = document.querySelector(".filters");
 const loadStatus = document.querySelector("#load-status");
 const retryButton = document.querySelector("#retry-button");
+const submitButton = taskForm.querySelector('button[type="submit"]');
 let currentFilter = "semua";
 let loadState = "loading";
 let loadError = "";
 
-async function api(path) {
-  const response = await fetch(path);
-  const payload = await response.json().catch(() => null);
+async function api(path, options = {}) {
+  const response = await fetch(path, options);
+  const responseText = await response.text();
+  let payload = null;
+
+  if (responseText) {
+    try {
+      payload = JSON.parse(responseText);
+    } catch {
+      payload = responseText;
+    }
+  }
 
   if (!response.ok) {
-    throw new Error(payload?.message || payload?.error || `Request gagal (${response.status}).`);
+    const serverMessage = payload?.message || payload?.error ||
+      (typeof payload === "string" ? payload : "");
+    throw new Error(serverMessage || `Request gagal (${response.status}).`);
   }
 
   return payload;
@@ -39,11 +51,13 @@ async function fetchTasks() {
     tasks = serverTasks;
     loadState = "success";
     render();
+    return true;
   } catch (error) {
     tasks = [];
     loadState = "error";
     loadError = error.message;
     render();
+    return false;
   } finally {
     retryButton.disabled = false;
   }
@@ -181,7 +195,7 @@ taskList.addEventListener("click", (event) => {
   render();
 });
 
-taskForm.addEventListener("submit", (event) => {
+taskForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(taskForm);
@@ -199,27 +213,46 @@ taskForm.addEventListener("submit", (event) => {
     return;
   }
 
-  const duplicateTask = tasks.some((task) =>
-    task.judul.trim().toLocaleLowerCase("id") === judul.toLocaleLowerCase("id") &&
-    task.matkul === matkul
-  );
-
-  if (duplicateTask) {
-    formMessage.textContent = "Tugas dengan judul tersebut sudah ada di mata kuliah ini.";
-    return;
-  }
-
-  tasks.push({
-    id: Date.now(),
-    judul,
-    matkul,
-    deadline,
-    selesai: false,
-  });
-
-  taskForm.reset();
+  submitButton.disabled = true;
+  submitButton.textContent = "Mengirim…";
+  formMessage.classList.remove("is-success");
   formMessage.textContent = "";
-  render();
+
+  try {
+    const payload = await api("/api/tugas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ judul, matkul, deadline }),
+    });
+
+    const createdTask = payload?.data ?? payload?.task ?? payload;
+    if (Array.isArray(createdTask)) {
+      tasks = createdTask;
+    } else if (createdTask && typeof createdTask === "object" && createdTask.id != null) {
+      tasks.push(createdTask);
+    } else {
+      const refreshed = await fetchTasks();
+      if (!refreshed) {
+        taskForm.reset();
+        formMessage.classList.add("is-success");
+        formMessage.textContent = "Tugas terkirim, tetapi daftar gagal diperbarui. Coba muat ulang.";
+        return;
+      }
+    }
+
+    loadState = "success";
+    loadError = "";
+    taskForm.reset();
+    formMessage.classList.add("is-success");
+    formMessage.textContent = "Tugas berhasil ditambahkan.";
+    render();
+  } catch (error) {
+    formMessage.classList.remove("is-success");
+    formMessage.textContent = error.message;
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "Tambah tugas";
+  }
 });
 
 retryButton.addEventListener("click", fetchTasks);
