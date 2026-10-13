@@ -28,6 +28,7 @@ function render() {
   tasks.forEach((task) => {
     const item = document.createElement("li");
     item.className = "task-item";
+    item.dataset.taskId = task.id;
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -62,6 +63,32 @@ function render() {
   emptyState.hidden = tasks.length > 0;
 }
 
+// Satu listener di parent menangani kontrol pada semua item tugas.
+taskList.addEventListener("change", (event) => {
+  if (!event.target.matches('input[type="checkbox"]')) return;
+
+  const item = event.target.closest(".task-item");
+  const taskId = Number(item.dataset.taskId);
+  const task = tasks.find((currentTask) => currentTask.id === taskId);
+
+  if (!task) return;
+  task.selesai = event.target.checked;
+  render();
+});
+
+taskList.addEventListener("click", (event) => {
+  const deleteButton = event.target.closest(".delete-button");
+  if (!deleteButton || !taskList.contains(deleteButton)) return;
+
+  const item = deleteButton.closest(".task-item");
+  const taskId = Number(item.dataset.taskId);
+  const taskIndex = tasks.findIndex((task) => task.id === taskId);
+
+  if (taskIndex === -1) return;
+  tasks.splice(taskIndex, 1);
+  render();
+});
+
 taskForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
@@ -77,6 +104,16 @@ taskForm.addEventListener("submit", (event) => {
 
   if (!deadline) {
     formMessage.textContent = "Deadline wajib diisi.";
+    return;
+  }
+
+  const duplicateTask = tasks.some((task) =>
+    task.judul.trim().toLocaleLowerCase("id") === judul.toLocaleLowerCase("id") &&
+    task.matkul === matkul
+  );
+
+  if (duplicateTask) {
+    formMessage.textContent = "Tugas dengan judul tersebut sudah ada di mata kuliah ini.";
     return;
   }
 
