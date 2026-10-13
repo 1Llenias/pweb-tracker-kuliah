@@ -1,5 +1,5 @@
 // Tahap 2: rendering daftar tugas dari state (array of objects).
-const tasks = [
+const initialTasks = [
   {
     id: 1,
     judul: "Lab 10 event delegation",
@@ -15,6 +15,38 @@ const tasks = [
     selesai: true,
   },
 ];
+const storageKey = "task-tracker-kuliah-tasks";
+
+function loadTasks() {
+  try {
+    const savedTasks = localStorage.getItem(storageKey);
+    if (!savedTasks) return initialTasks;
+
+    const parsedTasks = JSON.parse(savedTasks);
+    if (!Array.isArray(parsedTasks)) return initialTasks;
+
+    return parsedTasks.filter((task) =>
+      task && Number.isFinite(Number(task.id)) &&
+      typeof task.judul === "string" &&
+      typeof task.matkul === "string" &&
+      typeof task.deadline === "string" &&
+      typeof task.selesai === "boolean"
+    );
+  } catch (error) {
+    console.warn("Data tugas dari localStorage tidak dapat dibaca.", error);
+    return initialTasks;
+  }
+}
+
+let tasks = loadTasks();
+
+function saveTasks() {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(tasks));
+  } catch (error) {
+    console.warn("Data tugas tidak dapat disimpan ke localStorage.", error);
+  }
+}
 
 const taskList = document.querySelector("#task-list");
 const taskCounter = document.querySelector("#task-counter");
@@ -27,7 +59,10 @@ let currentFilter = "semua";
 function render() {
   taskList.replaceChildren();
 
-  const visibleTasks = tasks.filter((task) => {
+  const sortedTasks = [...tasks].sort((first, second) =>
+    first.deadline.localeCompare(second.deadline)
+  );
+  const visibleTasks = sortedTasks.filter((task) => {
     if (currentFilter === "aktif") return !task.selesai;
     if (currentFilter === "selesai") return task.selesai;
     return true;
@@ -98,6 +133,7 @@ taskList.addEventListener("change", (event) => {
 
   if (!task) return;
   task.selesai = event.target.checked;
+  saveTasks();
   render();
 });
 
@@ -111,6 +147,7 @@ taskList.addEventListener("click", (event) => {
 
   if (taskIndex === -1) return;
   tasks.splice(taskIndex, 1);
+  saveTasks();
   render();
 });
 
@@ -150,6 +187,7 @@ taskForm.addEventListener("submit", (event) => {
     selesai: false,
   });
 
+  saveTasks();
   taskForm.reset();
   formMessage.textContent = "";
   render();
