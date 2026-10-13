@@ -37,6 +37,14 @@ h1 { margin: 8px 0; font-size: clamp(26px, 5vw, 36px); }
 .filter-button.is-active { border-color: #10283b; background: #10283b; color: white; }
 .task-counter { margin: 0; color: #5d7283; font-size: 14px; }
 .task-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.task-item { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid #d5e0e8; border-radius: 7px; }
+.task-item input { width: 16px; height: 16px; margin: 0; }
+.task-details { min-width: 0; }
+.task-title, .task-metadata { margin: 0; }
+.task-title { color: #263d50; font-size: 14px; }
+.task-title.is-complete { color: #8293a0; text-decoration: line-through; }
+.task-metadata { margin-top: 4px; color: #637b8d; font-size: 12px; }
+.delete-button { padding: 6px 9px; border: 1px solid #e4a39a; border-radius: 6px; background: #fff; color: #b64031; cursor: pointer; }
 .empty-state { margin: 18px 0 4px; color: #718392; text-align: center; }
 
 @media (max-width: 480px) {
