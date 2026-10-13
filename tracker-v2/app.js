@@ -10,13 +10,33 @@ const filterButtons = document.querySelector(".filters");
 const loadStatus = document.querySelector("#load-status");
 const retryButton = document.querySelector("#retry-button");
 const actionMessage = document.querySelector("#action-message");
+const searchInput = document.querySelector("#task-search");
 const submitButton = taskForm.querySelector('button[type="submit"]');
 let currentFilter = "semua";
 let loadState = "loading";
 let loadError = "";
+let apiMode = "normal";
+let searchTerm = "";
+let searchTimer;
+const pendingTaskUpdates = new Set();
 
 async function api(path, options = {}) {
-  const response = await fetch(path, options);
+  const method = (options.method || "GET").toUpperCase();
+  if (apiMode === "offline") {
+    throw new Error(`${method} ${path} gagal: simulasi offline, server tidak dapat dijangkau.`);
+  }
+
+  if (apiMode === "lambat") {
+    await new Promise((resolve) => window.setTimeout(resolve, 1800));
+  }
+
+  let response;
+  try {
+    response = await fetch(path, options);
+  } catch {
+    throw new Error(`${method} ${path} gagal: tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.`);
+  }
+
   const responseText = await response.text();
   const contentType = response.headers.get("content-type") || "";
   let payload = null;
@@ -32,7 +52,6 @@ async function api(path, options = {}) {
   if (!response.ok) {
     const serverMessage = payload?.message || payload?.error ||
       (typeof payload === "string" && !contentType.includes("text/html") ? payload : "");
-    const method = (options.method || "GET").toUpperCase();
     const detail = serverMessage || (contentType.includes("text/html")
       ? "Server mengembalikan halaman HTML, bukan respons API JSON."
       : "Tidak ada pesan dari server.");
@@ -122,9 +141,11 @@ function render() {
     first.deadline.localeCompare(second.deadline)
   );
   const visibleTasks = sortedTasks.filter((task) => {
-    if (currentFilter === "aktif") return !task.selesai;
-    if (currentFilter === "selesai") return task.selesai;
-    return true;
+    const matchesStatus = currentFilter === "aktif"
+      ? !task.selesai
+      : currentFilter === "selesai" ? task.selesai : true;
+    const searchableText = `${task.judul} ${task.matkul}`.toLocaleLowerCase("id");
+    return matchesStatus && searchableText.includes(searchTerm);
   });
 
   visibleTasks.forEach((task) => {
@@ -135,6 +156,7 @@ function render() {
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = task.selesai;
+    checkbox.disabled = pendingTaskUpdates.has(String(task.id));
     checkbox.setAttribute("aria-label", `Tandai ${task.judul} selesai`);
 
     const details = document.createElement("div");
@@ -152,6 +174,7 @@ function render() {
     const deleteButton = document.createElement("button");
     deleteButton.className = "delete-button";
     deleteButton.type = "button";
+    deleteButton.disabled = pendingTaskUpdates.has(String(task.id));
     deleteButton.textContent = "Hapus";
     deleteButton.setAttribute("aria-label", `Hapus ${task.judul}`);
 
@@ -164,7 +187,9 @@ function render() {
   taskCounter.textContent = `${activeCount} tugas aktif`;
   emptyState.textContent = tasks.length === 0
     ? "Belum ada tugas. Tambahkan tugas pertamamu."
-    : "Tidak ada tugas untuk filter ini.";
+    : searchTerm && visibleTasks.length === 0
+      ? "Tidak ada tugas yang cocok dengan pencarian."
+      : "Tidak ada tugas untuk filter ini.";
   emptyState.hidden = visibleTasks.length > 0;
 }
 
@@ -174,6 +199,14 @@ filterButtons.addEventListener("click", (event) => {
 
   currentFilter = button.dataset.filter;
   render();
+});
+
+searchInput.addEventListener("input", () => {
+  window.clearTimeout(searchTimer);
+  searchTimer = window.setTimeout(() => {
+    searchTerm = searchInput.value.trim().toLocaleLowerCase("id");
+    render();
+  }, 300);
 });
 
 // Satu listener di parent menangani kontrol pada semua item tugas.
@@ -186,23 +219,30 @@ taskList.addEventListener("change", async (event) => {
   const task = tasks.find((currentTask) => String(currentTask.id) === taskId);
 
   if (!task) return;
-  checkbox.disabled = true;
+  const previousStatus = task.selesai;
+  const nextStatus = checkbox.checked;
+  pendingTaskUpdates.add(taskId);
+  task.selesai = nextStatus;
   actionMessage.hidden = true;
+  render();
 
   try {
     const payload = await api(`/api/tugas/${encodeURIComponent(taskId)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ selesai: checkbox.checked }),
+      body: JSON.stringify({ selesai: nextStatus }),
     });
 
     const responseTask = payload?.data ?? payload?.task ?? payload;
     if (responseTask && typeof responseTask === "object" && !Array.isArray(responseTask)) {
       Object.assign(task, responseTask);
     }
-    if (typeof responseTask?.selesai !== "boolean") task.selesai = checkbox.checked;
+    if (typeof responseTask?.selesai !== "boolean") task.selesai = nextStatus;
+    pendingTaskUpdates.delete(taskId);
     render();
   } catch (error) {
+    task.selesai = previousStatus;
+    pendingTaskUpdates.delete(taskId);
     render();
     actionMessage.textContent = `Gagal memperbarui tugas: ${error.message}`;
     actionMessage.hidden = false;
@@ -218,15 +258,16 @@ taskList.addEventListener("click", async (event) => {
   const taskIndex = tasks.findIndex((task) => String(task.id) === taskId);
 
   if (taskIndex === -1) return;
+  const [removedTask] = tasks.splice(taskIndex, 1);
   deleteButton.disabled = true;
   actionMessage.hidden = true;
+  render();
 
   try {
     await api(`/api/tugas/${encodeURIComponent(taskId)}`, { method: "DELETE" });
-    const currentIndex = tasks.findIndex((task) => String(task.id) === taskId);
-    if (currentIndex !== -1) tasks.splice(currentIndex, 1);
     render();
   } catch (error) {
+    tasks.splice(Math.min(taskIndex, tasks.length), 0, removedTask);
     render();
     actionMessage.textContent = `Gagal menghapus tugas: ${error.message}`;
     actionMessage.hidden = false;
@@ -256,6 +297,13 @@ taskForm.addEventListener("submit", async (event) => {
   formMessage.classList.remove("is-success");
   formMessage.textContent = "";
 
+  const temporaryId = `temporary-${Date.now()}`;
+  const optimisticTask = { id: temporaryId, judul, matkul, deadline, selesai: false };
+  tasks.push(optimisticTask);
+  loadState = "success";
+  loadError = "";
+  render();
+
   try {
     const payload = await api("/api/tugas", {
       method: "POST",
@@ -267,10 +315,14 @@ taskForm.addEventListener("submit", async (event) => {
     if (Array.isArray(createdTask)) {
       tasks = createdTask;
     } else if (createdTask && typeof createdTask === "object" && createdTask.id != null) {
-      tasks.push(createdTask);
+      const optimisticIndex = tasks.findIndex((task) => task.id === temporaryId);
+      const confirmedTask = { ...optimisticTask, ...createdTask };
+      if (optimisticIndex === -1) tasks.push(confirmedTask);
+      else tasks.splice(optimisticIndex, 1, confirmedTask);
     } else {
       const refreshed = await fetchTasks();
       if (!refreshed) {
+        tasks = tasks.filter((task) => task.id !== temporaryId);
         taskForm.reset();
         formMessage.classList.add("is-success");
         formMessage.textContent = "Tugas terkirim, tetapi daftar gagal diperbarui. Coba muat ulang.";
@@ -285,6 +337,8 @@ taskForm.addEventListener("submit", async (event) => {
     formMessage.textContent = "Tugas berhasil ditambahkan.";
     render();
   } catch (error) {
+    tasks = tasks.filter((task) => task.id !== temporaryId);
+    render();
     formMessage.classList.remove("is-success");
     formMessage.textContent = error.message;
   } finally {
@@ -294,4 +348,17 @@ taskForm.addEventListener("submit", async (event) => {
 });
 
 retryButton.addEventListener("click", fetchTasks);
+
+window.__API = Object.freeze({
+  setMode(mode) {
+    if (!["normal", "offline", "lambat"].includes(mode)) {
+      throw new Error('Mode API harus "normal", "offline", atau "lambat".');
+    }
+    apiMode = mode;
+    return apiMode;
+  },
+  reload: fetchTasks,
+  getMode: () => apiMode,
+});
+
 fetchTasks();

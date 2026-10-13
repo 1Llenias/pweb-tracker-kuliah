@@ -38,6 +38,8 @@ h1 { margin: 8px 0; font-size: clamp(26px, 5vw, 36px); }
 .filter-button { padding: 7px 12px; border: 1px solid #b7c8d6; border-radius: 6px; background: white; color: #263d50; cursor: pointer; }
 .filter-button.is-active { border-color: #10283b; background: #10283b; color: white; }
 .task-counter { margin: 0; color: #5d7283; font-size: 14px; }
+.search-control { display: grid; gap: 6px; margin: 16px 0 12px; color: #435668; font-size: 13px; font-weight: 600; }
+.search-control input { width: 100%; min-height: 40px; padding: 9px 12px; border: 1px solid #b7c8d6; border-radius: 6px; color: #172b3b; font: inherit; font-weight: 400; }
 .load-status { margin: 12px 0; color: #5d7283; font-size: 14px; }
 .load-status.is-loading { color: #526f83; }
 .load-status.is-error { color: #b64031; }
@@ -61,6 +63,7 @@ h1 { margin: 8px 0; font-size: clamp(26px, 5vw, 36px); }
 .task-title.is-complete { color: #8293a0; text-decoration: line-through; }
 .task-metadata { margin-top: 4px; color: #637b8d; font-size: 12px; }
 .delete-button { padding: 6px 9px; border: 1px solid #e4a39a; border-radius: 6px; background: #fff; color: #b64031; cursor: pointer; }
+.delete-button:disabled { opacity: .55; cursor: wait; }
 .empty-state { margin: 18px 0 4px; color: #718392; text-align: center; }
 
 @media (max-width: 480px) {
