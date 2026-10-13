@@ -19,6 +19,8 @@ const tasks = [
 const taskList = document.querySelector("#task-list");
 const taskCounter = document.querySelector("#task-counter");
 const emptyState = document.querySelector("#empty-state");
+const taskForm = document.querySelector("#task-form");
+const formMessage = document.querySelector("#form-message");
 
 function render() {
   taskList.replaceChildren();
@@ -59,5 +61,36 @@ function render() {
   taskCounter.textContent = `${activeCount} tugas aktif`;
   emptyState.hidden = tasks.length > 0;
 }
+
+taskForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const formData = new FormData(taskForm);
+  const judul = formData.get("judul").trim();
+  const matkul = formData.get("matkul");
+  const deadline = formData.get("deadline");
+
+  if (judul.length < 3) {
+    formMessage.textContent = "Judul tugas harus terdiri dari minimal 3 karakter.";
+    return;
+  }
+
+  if (!deadline) {
+    formMessage.textContent = "Deadline wajib diisi.";
+    return;
+  }
+
+  tasks.push({
+    id: Date.now(),
+    judul,
+    matkul,
+    deadline,
+    selesai: false,
+  });
+
+  taskForm.reset();
+  formMessage.textContent = "";
+  render();
+});
 
 render();
